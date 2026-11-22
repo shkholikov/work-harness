@@ -9,4 +9,9 @@ Private harness for GitHub Copilot and Microsoft 365 Copilot on the work laptop
 
 Company-internal values (hosts, URLs, paths, keys) stay placeholders in this repo.
 
-See `docs/history.md` for the discussion history and open items.
+## Contents
+
+- [`docs/history.md`](docs/history.md): discussion history and open items
+- [`docs/tech-stack.md`](docs/tech-stack.md): work tech stack and guardrails
+- [`docs/copilot-cli-cheatsheet.md`](docs/copilot-cli-cheatsheet.md): Copilot CLI cheat sheet (costs, commands, modes, permissions)
+- [`reference/claude-setup.md`](reference/claude-setup.md): personal Claude Code setup used as the template
