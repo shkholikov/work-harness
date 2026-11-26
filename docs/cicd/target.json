@@ -1,0 +1,48 @@
+{
+  "title": "CI/CD target: build once, promote",
+  "subtitle": ".NET API + React frontend: one tested image moves DEV -> TUC -> TUD -> PROD",
+  "nodes": [
+    {"id": "merge", "label": "Merge to main", "sub": "short-lived feature branches + PR builds", "shape": "pill", "tone": "neutral", "icon": "git-branch"},
+    {"id": "ci", "label": "TeamCity build, once", "sub": "Kotlin DSL, one build per commit", "step": 1, "tone": "blue",
+     "tiles": [
+       {"icon": "code", "label": "Build"},
+       {"icon": "check-check", "label": "Tests"},
+       {"icon": "search", "label": "Sonar"},
+       {"icon": "shield-check", "label": "Sonatype"}
+     ]},
+    {"id": "image", "label": "Image app:<git-sha>", "sub": "Podman, immutable tag", "step": 2, "tone": "blue", "icon": "container"},
+    {"id": "reg", "label": "Quay + DASY", "sub": "DASY syncs to ImageStream", "step": 3, "tone": "blue", "icon": "boxes"},
+    {"id": "dev", "label": "Bump overlays/dev", "sub": "kustomize edit set image", "step": 4, "tone": "blue", "icon": "file-check"},
+    {"id": "promote", "label": "Promote", "sub": "PR copies tag to next overlay", "step": 5, "shape": "diamond", "tone": "amber", "icon": "merge"},
+    {"id": "argo", "label": "ArgoCD sync", "sub": "main + overlays/<env>", "step": 6, "tone": "rust", "icon": "refresh-cw"},
+    {"id": "smoke", "label": "PostSync smoke test", "sub": "/health/ready + key APIs", "step": 7, "tone": "rust", "icon": "clipboard-check"},
+    {"id": "live", "label": "Verified release", "sub": "same image in every env", "shape": "pill", "tone": "green", "icon": "check-check"}
+  ],
+  "zone": {"label": "GITOPS PROMOTION, NO REBUILD", "from": "dev", "to": "smoke"},
+  "sidecars": [
+    {"id": "gates", "anchor": "ci", "label": "Blocking gates", "sub": "Sonatype fails on critical for TUD / PROD", "icon": "lock", "tone": "amber"},
+    {"id": "db", "anchor": "image", "label": "Migration script", "sub": "idempotent EF SQL artifact for the DBA", "icon": "database", "tone": "slate"},
+    {"id": "approve", "anchor": "promote", "label": "Approvals", "sub": "PR review per env; PROD protected", "icon": "users", "tone": "amber"},
+    {"id": "vault", "anchor": "argo", "label": "HashiCorp Vault", "sub": "secrets per env path", "icon": "key", "tone": "slate"},
+    {"id": "notify", "anchor": "smoke", "label": "ArgoCD Notifications", "sub": "Teams / email on sync, fail, degraded", "icon": "bell", "tone": "slate"}
+  ],
+  "flow": [
+    {"from": "merge", "to": "ci", "label": "trigger"},
+    {"from": "ci", "to": "image", "label": "passed gates"},
+    {"from": "image", "to": "reg", "label": "push once"},
+    {"from": "reg", "to": "dev", "label": "app:<sha>"},
+    {"from": "dev", "to": "promote", "label": "DEV deployed + verified"},
+    {"from": "promote", "to": "argo", "label": "one-line PR merged"},
+    {"from": "argo", "to": "smoke", "label": "synced"},
+    {"from": "smoke", "to": "live", "label": "healthy", "color": "#2e7d5b"}
+  ],
+  "links": [
+    {"from": "gates", "to": "ci", "style": "dashed"},
+    {"from": "db", "to": "image", "style": "dotted", "arrow": false},
+    {"from": "approve", "to": "promote", "style": "dashed"},
+    {"from": "vault", "to": "argo", "style": "dotted", "arrow": false},
+    {"from": "notify", "to": "smoke", "style": "dotted", "arrow": false},
+    {"from": "smoke", "to": "promote", "style": "dashed", "label": "next env: TUC -> TUD -> PROD", "route": "gutter", "tone": "green"},
+    {"from": "smoke", "to": "dev", "style": "dashed", "label": "failed: revert tag", "route": "gutter"}
+  ]
+}

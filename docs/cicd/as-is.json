@@ -1,0 +1,42 @@
+{
+  "title": "CI/CD today: rebuilt per environment",
+  "subtitle": ".NET API + React frontend: every env branch rebuilds and pushes a new image",
+  "nodes": [
+    {"id": "push", "label": "Push to env branch", "sub": "dev / tuc / tud / main", "shape": "pill", "tone": "neutral", "icon": "git-branch"},
+    {"id": "tc", "label": "TeamCity env subproject", "sub": "one per DEV / TUC / TUD / PROD", "step": 1, "tone": "blue",
+     "tiles": [
+       {"icon": "code", "label": "Build"},
+       {"icon": "check-check", "label": "Tests"},
+       {"icon": "search", "label": "Sonar + Sonatype"}
+     ]},
+    {"id": "image", "label": "Image built again", "sub": "Podman, tag = build number", "step": 2, "tone": "rust", "icon": "container"},
+    {"id": "reg", "label": "Quay + DASY", "sub": "DASY syncs to ImageStream", "step": 3, "tone": "blue", "icon": "boxes"},
+    {"id": "bump", "label": "Tag bump on GitOps dev", "sub": "edits overlays/<env>", "step": 4, "tone": "blue", "icon": "file-text"},
+    {"id": "pr", "label": "PR dev -> env branch", "sub": "whole-branch merge", "step": 5, "shape": "diamond", "tone": "amber", "icon": "merge"},
+    {"id": "argo", "label": "ArgoCD sync", "sub": "branch <env> + overlays/<env>", "step": 6, "tone": "rust", "icon": "refresh-cw"},
+    {"id": "run", "label": "Running on OpenShift", "sub": "nobody verifies it", "shape": "pill", "tone": "neutral", "icon": "server"}
+  ],
+  "zone": {"label": "REPEATED FOR EVERY ENVIRONMENT", "from": "tc", "to": "argo"},
+  "sidecars": [
+    {"id": "gates", "anchor": "tc", "label": "Gates report only", "sub": "findings never stop a build", "icon": "triangle-alert", "tone": "amber"},
+    {"id": "drift", "anchor": "image", "label": "Different image per env", "sub": "PROD image was never tested in TUD; build numbers can collide", "icon": "bug", "tone": "rust"},
+    {"id": "leak", "anchor": "pr", "label": "Unrelated changes ride along", "sub": "merging dev carries base + other overlay edits", "icon": "split", "tone": "amber"},
+    {"id": "blind", "anchor": "argo", "label": "No checks after deploy", "sub": "no smoke test, alerts or rollback plan; DB migrations manual", "icon": "eye", "tone": "slate"}
+  ],
+  "flow": [
+    {"from": "push", "to": "tc", "label": "trigger"},
+    {"from": "tc", "to": "image", "label": "artifacts"},
+    {"from": "image", "to": "reg", "label": "app:<build no.>"},
+    {"from": "reg", "to": "bump", "label": "new tag"},
+    {"from": "bump", "to": "pr", "label": "dev pushed directly"},
+    {"from": "pr", "to": "argo", "label": "manual merge"},
+    {"from": "argo", "to": "run", "label": "deployed"}
+  ],
+  "links": [
+    {"from": "gates", "to": "tc", "style": "dotted", "arrow": false},
+    {"from": "drift", "to": "image", "style": "dotted", "arrow": false},
+    {"from": "leak", "to": "pr", "style": "dotted", "arrow": false},
+    {"from": "blind", "to": "argo", "style": "dotted", "arrow": false},
+    {"from": "argo", "to": "tc", "style": "dashed", "label": "next env: rebuild from scratch", "route": "gutter"}
+  ]
+}
