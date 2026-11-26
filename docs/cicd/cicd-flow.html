@@ -1,0 +1,88 @@
+<title>CI/CD Promotion Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: two diagrams side by side (as-is | target), stacked on narrow screens; a change table underneath. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --fg: #16203a;
+  --muted: #5b6680;
+  --line: #dde2ec;
+  --bad: #c4552f;
+  --good: #2e7d5b;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1422; --surface: #182033; --fg: #e6eaf3; --muted: #9aa5bd; --line: #2a3450;
+    --bad: #e8825f; --good: #5cbf8f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1422; --surface: #182033; --fg: #e6eaf3; --muted: #9aa5bd; --line: #2a3450;
+  --bad: #e8825f; --good: #5cbf8f; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 56px; display: grid; gap: 32px; }
+header { display: grid; gap: 6px; max-width: 70ch; }
+h1 { margin: 0; font-size: 1.9rem; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+code { font-family: var(--mono); font-size: 0.88em; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figcaption { display: flex; align-items: baseline; gap: 10px; font-weight: 600; }
+.tag { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; }
+.tag.bad { color: var(--bad); }
+.tag.good { color: var(--good); }
+.sheet { background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.sheet img { display: block; width: 100%; height: auto; }
+h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 600; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; }
+th, td { text-align: left; vertical-align: top; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 500; white-space: nowrap; }
+td.was { color: var(--muted); }
+@media (max-width: 860px) { .pair { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>CI/CD promotion flow: today vs. target</h1>
+    <p>.NET API and React frontend on OpenShift. Today every environment rebuilds its own image. In the target design, one image is built per commit and the same tag is promoted DEV &rarr; TUC &rarr; TUD &rarr; PROD through GitOps PRs.</p>
+  </header>
+
+  <div class="pair">
+    <figure>
+      <figcaption><span class="tag bad">As-is</span> Rebuilt per environment</figcaption>
+      <div class="sheet"><img src="as-is.svg" alt="Current flow: a push to an env branch triggers a TeamCity subproject that rebuilds, retags with the build number, bumps the GitOps dev branch and merges dev into the env branch; repeated for every environment, with report-only gates and no post-deploy checks." width="932" height="1478"></div>
+    </figure>
+    <figure>
+      <figcaption><span class="tag good">Target</span> Build once, promote</figcaption>
+      <div class="sheet"><img src="target.svg" alt="Target flow: merge to main, TeamCity builds once with blocking gates, pushes app:git-sha to Quay and DASY, bumps overlays/dev, then a Promote step opens one-line PRs per environment; ArgoCD syncs, a PostSync smoke test verifies, notifications report, and a failure reverts the tag." width="932" height="1622"></div>
+    </figure>
+  </div>
+
+  <section>
+    <h2>What changes</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Area</th><th>Today</th><th>Target</th></tr></thead>
+        <tbody>
+          <tr><td>Image</td><td class="was">Rebuilt in every env subproject</td><td>Built once per commit, same image in every env</td></tr>
+          <tr><td>Tag</td><td class="was">TeamCity build number</td><td><code>app:&lt;git-sha&gt;</code>, immutable</td></tr>
+          <tr><td>Tag bump</td><td class="was">Edits overlay on GitOps <code>dev</code> branch</td><td><code>kustomize edit set image</code> on <code>overlays/dev</code></td></tr>
+          <tr><td>Promotion</td><td class="was">Whole-branch PR <code>dev</code> &rarr; env branch</td><td>One-line PR copying the tag to the next overlay</td></tr>
+          <tr><td>GitOps repo</td><td class="was">Branch per env + overlay per env</td><td>One branch, overlay per env (PROD protected)</td></tr>
+          <tr><td>Source branches</td><td class="was"><code>dev</code> / <code>tuc</code> / <code>tud</code> / <code>main</code></td><td><code>main</code> + short-lived feature branches</td></tr>
+          <tr><td>Quality gates</td><td class="was">Sonar + Sonatype report only</td><td>Sonatype blocks critical for TUD / PROD</td></tr>
+          <tr><td>DB migrations</td><td class="was">Manual, not tied to a build</td><td>Idempotent EF SQL script shipped with each build, still run by the DBA</td></tr>
+          <tr><td>After deploy</td><td class="was">Nothing</td><td>PostSync smoke test, ArgoCD Notifications, rollback by reverting the tag</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
