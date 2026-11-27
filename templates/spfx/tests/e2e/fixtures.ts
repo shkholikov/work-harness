@@ -37,6 +37,8 @@ export function screenshotPath(name: string): string {
 // Separate Edge profile for tests: your normal Edge profile (all work sessions) is never touched.
 // Windows usually signs it in automatically with your work account; if not, run once with
 // SPFX_PW_SIGNIN=1 and sign in by hand.
+// TLS stays on: trust the dev certificate once with `pwsh -File scripts/dev.ps1 trust`
+// (Edge uses the Windows certificate store), so https://localhost loads without errors.
 const profileDir = process.env.SPFX_PW_PROFILE ?? path.join(os.homedir(), '.pw-edge-profile');
 
 export const test = base.extend({
@@ -44,7 +46,6 @@ export const test = base.extend({
     const context = await chromium.launchPersistentContext(profileDir, {
       channel: 'msedge',
       headless: process.env.SPFX_PW_HEADLESS === '1',
-      ignoreHTTPSErrors: true,
       viewport: { width: 1440, height: 900 },
     });
     await use(context);

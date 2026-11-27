@@ -40,9 +40,14 @@ $argsText = ($argsText -replace '\\\\', '/') -replace '\\(?=[A-Za-z0-9._ -])', '
 $cwd = [string]$payload.cwd
 
 # Paths an agent must never read or print (credentials, sessions).
-$secretPaths = '(\.vault-token|[\\/]\.kube[\\/]config|[\\/]\.ssh[\\/]|\.pfx\b|\.pem\b|id_rsa|\.pw-edge-profile|secrets(\.[\w-]+)?\.json\b)'
+$b = '(^|[\s\\/''"~=:])'   # start of a path segment
+$secretPaths = "(\.vault-token|$b\.kube[\\/]|$b\.ssh([\\/'""\s]|$)|\.pfx\b|\.p12\b|\.pem\b|\bid_(rsa|dsa|ecdsa|ed25519)\b|\.pw-edge-profile|secrets(\.[\w-]+)?\.json\b)"
 # Files that steer or restrain the agent itself; editing them needs your OK.
-$agentConfig = '([\\/]\.copilot[\\/]|\.github[\\/](hooks|copilot|agents|instructions|skills)[\\/]|copilot-instructions\.md|\.agent\.md|[\\/]\.vscode[\\/](settings|mcp)\.json|\.mcp\.json)'
+$agentConfig = "($b\.copilot[\\/]|\.github[\\/](hooks|copilot|agents|instructions|skills)[\\/]|copilot-instructions\.md|\.agent\.md|$b\.vscode[\\/](settings|mcp)\.json|\.mcp\.json)"
+# Files that implement the checks (verify scripts, git hooks, verify result); editing them needs your OK.
+$harnessFiles = '(\.git[\\/]hooks[\\/]|scripts[\\/](verify|dev|install-git-hooks)\.ps1|scripts[\\/](lib|git-hooks)[\\/]|spfx-harness\.json|\.spfx-dev[\\/]verify[\\/])'
+# Shell verbs that write, move or delete files (redirection excludes 2> and >&1).
+$writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|(?<![0-9&>])>{1,2}\s*[^\s&])'
 $prodOverlay = 'overlays[\\/]prod'
 
 $shellTools = @('powershell', 'bash', 'shell')
@@ -87,9 +92,11 @@ if ($shellTools -contains $script:toolName) {
         Out-Decision 'ask' 'Argo CD change'
     }
     if ($cmd -match '(^|[\s;&|(])vault(\.exe)?\s') { Out-Decision 'ask' 'Vault access; secret values must not appear in output' }
-    if ($cmd -match $prodOverlay -and $cmd -match '(Set-Content|Out-File|Add-Content|New-Item|Remove-Item|Move-Item|Copy-Item|kustomize\s+edit|>\s*\S)') {
+    if ($cmd -match $prodOverlay -and ($cmd -match $writeVerbs -or $cmd -match 'kustomize\s+edit')) {
         Out-Decision 'ask' 'changes a PROD overlay'
     }
+    if ($cmd -match $agentConfig -and $cmd -match $writeVerbs) { Out-Decision 'ask' 'changes Copilot configuration or guardrails' }
+    if ($cmd -match $harnessFiles -and $cmd -match $writeVerbs) { Out-Decision 'ask' 'changes the check scripts, git hooks or verify result' }
     if ($cmd -match '\bRemove-Item\b[^|;&\n]*-Recurse' -or $cmd -match '\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r') {
         Out-Decision 'ask' 'recursive delete'
     }
@@ -100,6 +107,7 @@ if ($editTools -contains $script:toolName) {
     if ($argsText -match $secretPaths) { Out-Decision 'deny' 'edits a credential or session file' }
     if ($argsText -match $prodOverlay) { Out-Decision 'ask' 'edits a PROD overlay' }
     if ($argsText -match $agentConfig) { Out-Decision 'ask' 'edits Copilot configuration or guardrails' }
+    if ($argsText -match $harnessFiles) { Out-Decision 'ask' 'edits the check scripts, git hooks or verify result' }
     exit 0
 }
 
