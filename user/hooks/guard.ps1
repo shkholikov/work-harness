@@ -48,7 +48,7 @@ $agentConfig = "($b\.copilot[\\/]|\.github[\\/](hooks|copilot|agents|instruction
 $harnessFiles = '(\.git[\\/]hooks[\\/]|scripts[\\/](verify|dev|install-git-hooks)\.ps1|scripts[\\/](lib|git-hooks)[\\/]|spfx-harness\.json|\.spfx-dev[\\/]verify[\\/])'
 # Shell verbs that write, move or delete files. Any redirect to a file counts (1>, 2>, *>, >>);
 # only >&1-style merges and redirects to $null, /dev/null or NUL do not.
-$writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|>{1,2}\s*(?!\$null\b|/dev/null\b|NUL\b)[^\s&])'
+$writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|>{1,2}\s*(?!(\$null|/dev/null|NUL)(?=[\s;&|)]|$))[^\s&])'
 $prodOverlay = 'overlays[\\/]prod'
 
 $shellTools = @('powershell', 'bash', 'shell')
