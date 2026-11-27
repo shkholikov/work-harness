@@ -41,13 +41,14 @@ $cwd = [string]$payload.cwd
 
 # Paths an agent must never read or print (credentials, sessions).
 $b = '(^|[\s\\/''"~=:])'   # start of a path segment
-$secretPaths = "(\.vault-token|$b\.kube[\\/]|$b\.ssh([\\/'""\s]|$)|\.pfx\b|\.p12\b|\.pem\b|\bid_(rsa|dsa|ecdsa|ed25519)\b|\.pw-edge-profile|secrets(\.[\w-]+)?\.json\b)"
+$secretPaths = "(\.vault-token|$b\.kube[\\/]|$b\.ssh([\\/'""\s]|$)|\.pfx\b|\.p12\b|\.pem\b|id_(rsa|dsa|ecdsa|ed25519)|\.pw-edge-profile|secrets(\.[\w-]+)?\.json\b)"
 # Files that steer or restrain the agent itself; editing them needs your OK.
 $agentConfig = "($b\.copilot[\\/]|\.github[\\/](hooks|copilot|agents|instructions|skills)[\\/]|copilot-instructions\.md|\.agent\.md|$b\.vscode[\\/](settings|mcp)\.json|\.mcp\.json)"
 # Files that implement the checks (verify scripts, git hooks, verify result); editing them needs your OK.
 $harnessFiles = '(\.git[\\/]hooks[\\/]|scripts[\\/](verify|dev|install-git-hooks)\.ps1|scripts[\\/](lib|git-hooks)[\\/]|spfx-harness\.json|\.spfx-dev[\\/]verify[\\/])'
-# Shell verbs that write, move or delete files (redirection excludes 2> and >&1).
-$writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|(?<![0-9&>])>{1,2}\s*[^\s&])'
+# Shell verbs that write, move or delete files. Any redirect to a file counts (1>, 2>, *>, >>);
+# only >&1-style merges and redirects to $null, /dev/null or NUL do not.
+$writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|>{1,2}\s*(?!\$null\b|/dev/null\b|NUL\b)[^\s&])'
 $prodOverlay = 'overlays[\\/]prod'
 
 $shellTools = @('powershell', 'bash', 'shell')
