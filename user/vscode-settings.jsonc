@@ -1,0 +1,30 @@
+// Recommended VS Code user settings for the work harness.
+// Paste the keys into your VS Code user settings.json (Ctrl+Shift+P -> "Preferences: Open User Settings (JSON)").
+// Key names change often: after pasting, open the Settings UI and check each one is recognised
+// (unknown keys are greyed out), and run "Developer: Policy Diagnostics" to see what your company enforces.
+{
+  // Copilot hooks (preview in VS Code). Lets VS Code use ~/.copilot/hooks and .github/hooks.
+  "chat.useHooks": true,
+
+  // Never auto-approve edits to files that steer or restrain the agent, or to PROD overlays.
+  "chat.tools.edits.autoApprove": {
+    "**/.github/hooks/**": false,
+    "**/.github/copilot/**": false,
+    "**/.github/agents/**": false,
+    "**/.github/instructions/**": false,
+    "**/.github/skills/**": false,
+    "**/copilot-instructions.md": false,
+    "**/.vscode/settings.json": false,
+    "**/.vscode/mcp.json": false,
+    "**/overlays/prod/**": false
+  },
+
+  // Terminal commands that must always ask (false = ask, it does not block; the guard hook blocks).
+  "chat.tools.terminal.autoApprove": {
+    "/^git (push|merge|rebase|reset)\\b/": false,
+    "/^(oc|kubectl)\\b/": false,
+    "/^argocd\\b/": false,
+    "/^vault\\b/": false,
+    "/^m365 spo app\\b/": false
+  }
+}

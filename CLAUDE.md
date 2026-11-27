@@ -2,7 +2,9 @@
 
 Source repo for an agent harness for **GitHub Copilot on my work laptop**: instructions, custom agents, prompt files, workflow graphs and guardrails. Authored here (personal Mac, Claude Code), later pushed to a private GitHub repo and cloned onto the work laptop.
 
-Work discuss-first: settle each piece in conversation, then generate files. Layout and install method are still open.
+Work discuss-first: settle each piece in conversation, then generate files.
+
+Layout (v1): `user/` = user-level files copied into `~/.copilot` by `install/install.ps1`; `templates/spfx/` = repo-level SPFx setup copied by `install/new-spfx-setup.ps1`. The guard hook has one source, `user/hooks/guard.ps1` (the SPFx installer copies it into the repo). Test scripts with `pwsh` on the Mac against temp folders (`-CopilotHome`, `-ProfilePath`, fake repos) before pushing. This repo pushes straight to `main`; no review workflow here.
 
 ## Target runtime
 

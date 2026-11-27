@@ -1,0 +1,25 @@
+{
+  "devSiteUrl": "https://<tenant>.sharepoint.com/sites/<dev-site>",
+  "port": 4321,
+  "webParts": ["<Web part title as shown in the toolbox>"],
+  "riskTiers": {
+    "high": [
+      "config/package-solution.json",
+      "config/serve.json",
+      "package.json",
+      "package-lock.json",
+      "**/*Service.ts",
+      "**/services/**",
+      "**/*.manifest.json"
+    ],
+    "low": [
+      "**/*.scss",
+      "**/*.css",
+      "**/loc/*.js",
+      "**/loc/*.d.ts",
+      "**/*.md",
+      "docs/**",
+      "assets/**"
+    ]
+  }
+}

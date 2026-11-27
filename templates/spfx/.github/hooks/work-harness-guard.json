@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "powershell": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/work-harness-guard.ps1",
+        "bash": "pwsh -NoProfile -File ./scripts/work-harness-guard.ps1",
+        "cwd": ".github/hooks",
+        "timeoutSec": 15
+      }
+    ]
+  }
+}

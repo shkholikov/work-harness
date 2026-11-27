@@ -1,0 +1,10 @@
+# Passed to every `copilot` run as --deny-tool by the PowerShell profile wrapper.
+# Deny always beats allow. The guard hook is the main enforcement; this is a second layer.
+# One pattern per line. Lines starting with # are ignored.
+shell(oc extract)
+shell(git push --force)
+shell(git push -f)
+shell(Add-PnPApp)
+shell(Publish-PnPApp)
+shell(Install-PnPApp)
+shell(Update-PnPApp)

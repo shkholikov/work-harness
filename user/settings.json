@@ -1,0 +1,10 @@
+{
+  "model": "claude-sonnet-5.5",
+  "effortLevel": "medium",
+  "defaultPermissionMode": "manual",
+  "footer": {
+    "showAiUsed": true,
+    "showQuota": true,
+    "showContextWindow": true
+  }
+}
