@@ -5,17 +5,22 @@
 
 .DESCRIPTION
   Never overwrites existing files unless -Force. Fills versions from package.json.
+  -Update refreshes only the files the harness owns (scripts, skills verify/stack/upgrade-spfx,
+  hooks, instructions, SPEC template) and removes renamed old files; your filled-in files
+  (copilot-instructions.md, spfx-harness.json, REVIEW.md, incidents.md, Playwright tests) stay.
   Run it on a branch (for example chore/copilot-setup), review the changes, open a PR.
 
 .EXAMPLE
   pwsh -File install/new-spfx-setup.ps1 -RepoPath C:\src\my-spfx -DryRun
   pwsh -File install/new-spfx-setup.ps1 -RepoPath C:\src\my-spfx -LsgSkillsPath C:\backup\lsg-skills
+  pwsh -File install/new-spfx-setup.ps1 -RepoPath C:\src\my-spfx -Update    # after git pull of work-harness
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$RepoPath,
     [string]$LsgSkillsPath,
     [switch]$Force,
+    [switch]$Update,
     [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
@@ -50,12 +55,26 @@ $lsg = if ($lsgName) { "$lsgName $($deps[$lsgName])" } else { '<package + versio
 $solution = if ($pkg.name) { $pkg.name } else { Split-Path -Leaf $Repo }
 Write-Host "SPFx $spfx, toolchain $toolchain, React $react, TypeScript $ts, Node $node, LSG $lsg"
 
+# Files the harness owns: -Update overwrites them. Everything else is yours after the first setup.
+$owned = '^(scripts/|\.github/skills/(verify|stack|upgrade-spfx)/|\.github/hooks/|\.github/instructions/|docs/specs/SPEC\.template\.md$)'
+# Files from older harness versions, removed by -Update.
+$legacy = @('scripts/dev.ps1', '.github/skills/dev/SKILL.md')
+
 # 1. Copy template files
-$created = 0; $skipped = @()
+$created = 0; $updated = 0; $skipped = @()
 Get-ChildItem $Template -Recurse -File -Force | ForEach-Object {
     $rel = $_.FullName.Substring($Template.Length).TrimStart('\', '/')
     $dest = Join-Path $Repo $rel
-    if ((Test-Path $dest) -and -not $Force) { $skipped += $rel; return }
+    $relKey = $rel -replace '\\', '/'
+    if (Test-Path $dest) {
+        $mayReplace = $Force -or ($Update -and $relKey -match $owned)
+        if (-not $mayReplace) { $skipped += $rel; return }
+        if ((Get-FileHash $dest).Hash -eq (Get-FileHash $_.FullName).Hash) { return }
+        Act "  update $rel"
+        if (-not $DryRun) { Copy-Item $_.FullName $dest -Force }
+        $updated++
+        return
+    }
     Act "  add $rel"
     if (-not $DryRun) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
@@ -65,11 +84,35 @@ Get-ChildItem $Template -Recurse -File -Force | ForEach-Object {
 }
 # Guard script: single source in user/hooks/guard.ps1
 $guardDest = Join-Path $Repo '.github/hooks/scripts/work-harness-guard.ps1'
-if ((Test-Path $guardDest) -and -not $Force) { $skipped += '.github/hooks/scripts/work-harness-guard.ps1' }
+$guardSrc = Join-Path $Root 'user/hooks/guard.ps1'
+if ((Test-Path $guardDest) -and -not ($Force -or $Update)) { $skipped += '.github/hooks/scripts/work-harness-guard.ps1' }
+elseif ((Test-Path $guardDest) -and (Get-FileHash $guardDest).Hash -eq (Get-FileHash $guardSrc).Hash) { }
 else {
-    Act '  add .github/hooks/scripts/work-harness-guard.ps1'
-    if (-not $DryRun) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $guardDest) | Out-Null; Copy-Item (Join-Path $Root 'user/hooks/guard.ps1') $guardDest -Force }
+    $verb = if (Test-Path $guardDest) { 'update' } else { 'add' }
+    Act "  $verb .github/hooks/scripts/work-harness-guard.ps1"
+    if (-not $DryRun) { New-Item -ItemType Directory -Force -Path (Split-Path -Parent $guardDest) | Out-Null; Copy-Item $guardSrc $guardDest -Force }
     $created++
+}
+
+# Remove files renamed in newer harness versions
+if ($Update) {
+    foreach ($old in $legacy) {
+        $path = Join-Path $Repo $old
+        if (Test-Path $path) {
+            Act "  remove $old (replaced in this harness version)"
+            if (-not $DryRun) {
+                Remove-Item $path -Force
+                $parent = Split-Path -Parent $path
+                if ((Test-Path $parent) -and -not (Get-ChildItem $parent -Force)) { Remove-Item $parent -Force }
+            }
+        }
+    }
+    foreach ($f in @('.github/copilot-instructions.md', 'docs/work-laptop-setup.md')) {
+        $path = Join-Path $Repo $f
+        if ((Test-Path $path) -and (Select-String -Path $path -Pattern 'scripts/dev\.ps1' -Quiet)) {
+            Write-Warning "$f still mentions scripts/dev.ps1: change it to scripts/stack.ps1 (up/down/restart/status/ports)."
+        }
+    }
 }
 
 # 2. Fill placeholders in the repo instructions
@@ -103,7 +146,7 @@ if ($LsgSkillsPath) {
     if (-not ($found | Where-Object { $_.Directory.Name -eq 'lsg' })) {
         Write-Warning "The instructions refer to a skill named 'lsg'. Rename your main LSG skill folder to 'lsg' or change the name in .github/copilot-instructions.md."
     }
-} else {
+} elseif (-not $Update) {
     Write-Warning "No -LsgSkillsPath given: copy your LSG skills into .github/skills/<name>/SKILL.md (main one named 'lsg')."
 }
 
@@ -111,10 +154,11 @@ if ($LsgSkillsPath) {
 if (-not $DryRun -and (Test-Path (Join-Path $Repo '.git'))) { & pwsh -NoProfile -File (Join-Path $Repo 'scripts/install-git-hooks.ps1') }
 
 Write-Host ''
+if ($Update) { Write-Host ''; Write-Host "Updated $updated, added $created files. Check with: git -C `"$Repo`" diff --stat"; exit 0 }
 Write-Host "Added $created files. Kept existing: $(if ($skipped) { $skipped -join ', ' } else { 'none' })"
 Write-Host 'Next, in the SPFx repo:'
 Write-Host '  1. Fill .github/spfx-harness.json: devSiteUrl (DEV site), port, webParts (toolbox titles). Check the riskTiers globs.'
 Write-Host '  2. npm i -D @playwright/test --save-exact   (Playwright uses your installed Edge, no browser download)'
-Write-Host '  3. pwsh -File scripts/dev.ps1 start, open the printed URL, then: $env:SPFX_PW_SIGNIN=1; npx playwright test -g "sign in"'
+Write-Host '  3. pwsh -File scripts/stack.ps1 up, open the printed URL, then: $env:SPFX_PW_SIGNIN=1; npx playwright test -g "sign in"'
 Write-Host '  4. pwsh -File scripts/verify.ps1   (expect PASS on the current code = your baseline)'
 Write-Host '  5. Commit on a branch, open a PR for your teammates.'

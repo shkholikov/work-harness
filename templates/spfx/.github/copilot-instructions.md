@@ -8,9 +8,9 @@ SharePoint Framework solution with React web parts. Deployed manually to the App
 - Pin React exactly: `npm install react@<v> react-dom@<v> --save-exact`. All `@microsoft/sp-*` packages on the same exact version.
 
 ## Dev
-- Start/stop: `pwsh -File scripts/dev.ps1 start|status|logs|stop` (port <4321>). Prints the hosted workbench URL.
+- Dev stack: `pwsh -File scripts/stack.ps1 up|down|restart|status|ports|logs|url` (port <4321>, live reload 35729). `up` prints the hosted workbench URL. Use the `stack` skill.
 - Dev site for testing: see `devSiteUrl` in `.github/spfx-harness.json`. Never test against production pages.
-- First time on a machine: `npm ci`, then `pwsh -File scripts/dev.ps1 trust` (dev certificate).
+- First time on a machine: `npm ci`, then `pwsh -File scripts/stack.ps1 trust` (dev certificate).
 
 ## Checks
 - `pwsh -File scripts/verify.ps1` runs Node check, lint, typecheck, tests, ship build and prints the risk tier. Add `-E2E` with the dev server running for the Playwright smoke test.

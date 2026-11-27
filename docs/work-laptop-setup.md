@@ -82,27 +82,42 @@ pwsh -File $HOME\src\work-harness\install\new-spfx-setup.ps1 -RepoPath . -LsgSki
 ```
 It adds (never overwrites existing files without `-Force`):
 - `.github/copilot-instructions.md` (versions filled from `package.json`), `.github/instructions/` (code, config)
-- `.github/skills/`: `verify`, `dev`, `upgrade-spfx` + your LSG skills (main one must be named `lsg`)
+- `.github/skills/`: `verify`, `stack`, `upgrade-spfx` + your LSG skills (main one must be named `lsg`)
 - `.github/hooks/`: repo copy of the guard, for teammates without the user-level install (yours steps aside)
 - `.github/spfx-harness.json`: dev site, port, web part titles, risk-tier globs
-- `scripts/dev.ps1`, `scripts/verify.ps1`, `scripts/git-hooks/pre-push` (installed into `.git/hooks`, blocks push to main)
+- `scripts/stack.ps1` (dev server up/down/restart/status/ports), `scripts/verify.ps1`, `scripts/git-hooks/pre-push` (installed into `.git/hooks`, blocks push to main)
 - `REVIEW.md`, `incidents.md`, `docs/specs/SPEC.template.md`, Playwright config + smoke test
 
 Then:
 1. Fill `.github/spfx-harness.json`: `devSiteUrl` (a DEV site, never production), `port` (from `config/serve.json`), `webParts` (titles as in the toolbox). Check the `riskTiers` globs match your folders.
 2. Trust the folder in copilot when asked (repo hooks only run in trusted folders).
-3. `npm ci`, then `pwsh -File scripts/dev.ps1 trust` once (dev certificate).
+3. `npm ci`, then `pwsh -File scripts/stack.ps1 trust` once (dev certificate).
 4. `pwsh -File scripts/verify.ps1` - must PASS on the current code. This is your baseline. Fails on Node: switch to the Node the message names (nvm-windows / fnm).
 5. Smoke test:
    ```powershell
    npm i -D @playwright/test --save-exact
-   pwsh -File scripts/dev.ps1 start
+   pwsh -File scripts/stack.ps1 up
    $env:SPFX_PW_SIGNIN='1'; npx playwright test -g "sign in"; Remove-Item Env:SPFX_PW_SIGNIN   # once: sign in the test Edge profile if needed
    pwsh -File scripts/verify.ps1 -E2E -Only e2e
    ```
    Screenshots land in `.spfx-dev/screenshots/`. If the toolbox selectors miss, send the error and a screenshot.
 6. Commit (`git add -A`; `.spfx-dev/` is ignored), push the branch, open the PR in Bitbucket for the team.
 7. Repeat for the second SPFx repo.
+
+## Updating
+
+```powershell
+cd $HOME\src\work-harness; git pull
+pwsh -File install\install.ps1                                   # general layer (~/.copilot)
+cd C:\src\<spfx-repo>; git switch -c chore/harness-update
+pwsh -File $HOME\src\work-harness\install\new-spfx-setup.ps1 -RepoPath . -Update -DryRun
+pwsh -File $HOME\src\work-harness\install\new-spfx-setup.ps1 -RepoPath . -Update
+git diff --stat
+```
+`-Update` replaces only harness files (scripts, skills verify/stack/upgrade-spfx, hooks, instructions)
+and removes renamed old ones (`scripts/dev.ps1`, skill `dev`). Your `copilot-instructions.md`,
+`spfx-harness.json`, `REVIEW.md`, `incidents.md` and Playwright tests stay as they are; it warns if one
+of them still mentions an old file. Restart copilot afterwards.
 
 ## 6. Daily use
 
@@ -111,7 +126,7 @@ Then:
 | Small fix | Just ask. When done: "verify", then "ship". |
 | Feature | `/agent planner` (Opus, runs `grill`, writes `docs/specs/<date>-<slug>.md` with a plan). New session (`/new`): "implement docs/specs/...". Then verify, ship. |
 | SPFx upgrade | "use upgrade-spfx" - writes `docs/upgrade-<version>.md`. Approve it, then one PR per step (A: 1.23.x + Heft + Node 22, B: 1.24.2 + React 18, C: LSG). |
-| Dev server | "start the dev server" (`dev` skill) |
+| Dev server | "stack up", "stack status", "stack ports", "stack down" (`stack` skill) |
 | Verify | "verify": checks, smoke test, review agents by tier (Low 0, Medium `reviewer`, High `reviewer-high` + `deep-reviewer`) |
 | Ship | "ship": checks the verify fingerprint, commits, asks before push, writes `.spfx-dev/pr.md` for the Bitbucket PR |
 

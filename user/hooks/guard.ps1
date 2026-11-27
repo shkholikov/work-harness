@@ -45,7 +45,7 @@ $secretPaths = "(\.vault-token|$b\.kube[\\/]|$b\.ssh([\\/'""\s]|$)|\.pfx\b|\.p12
 # Files that steer or restrain the agent itself; editing them needs your OK.
 $agentConfig = "($b\.copilot[\\/]|\.github[\\/](hooks|copilot|agents|instructions|skills)[\\/]|copilot-instructions\.md|\.agent\.md|$b\.vscode[\\/](settings|mcp)\.json|\.mcp\.json)"
 # Files that implement the checks (verify scripts, git hooks, verify result); editing them needs your OK.
-$harnessFiles = '(\.git[\\/]hooks[\\/]|scripts[\\/](verify|dev|install-git-hooks)\.ps1|scripts[\\/](lib|git-hooks)[\\/]|spfx-harness\.json|\.spfx-dev[\\/]verify[\\/])'
+$harnessFiles = '(\.git[\\/]hooks[\\/]|scripts[\\/](verify|dev|stack|install-git-hooks)\.ps1|scripts[\\/](lib|git-hooks)[\\/]|spfx-harness\.json|\.spfx-dev[\\/]verify[\\/])'
 # Shell verbs that write, move or delete files. Any redirect to a file counts (1>, 2>, *>, >>);
 # only >&1-style merges and redirects to $null, /dev/null or NUL do not.
 $writeVerbs = '(\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Tee-Object)\b|(^|[\s;&|(])(sc|ac|ni|ri|rm|del|erase|mv|move|cp|copy|ren|tee|rmdir|rd)\s|\bsed\s+-i|\bperl\s+-[a-z]*i|\b(WriteAll(Text|Lines|Bytes)|AppendAll(Text|Lines))\b|\bgit\s+(checkout|restore|apply)\b|>{1,2}\s*(?!(\$null|/dev/null|NUL)(?=[\s;&|)]|$))[^\s&])'

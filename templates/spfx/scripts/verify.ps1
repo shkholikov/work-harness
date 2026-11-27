@@ -107,7 +107,7 @@ if ($ok -and (Want 'build')) {
 }
 if ($ok -and ($E2E -or ($Only -contains 'e2e'))) {
     $port = Get-ServePort
-    if (-not (Test-Port $port)) { Add-Result 'e2e' 'FAIL' "dev server not running on $port; run: scripts/dev.ps1 start"; $ok = $false }
+    if (-not (Test-Port $port)) { Add-Result 'e2e' 'FAIL' "dev server not running on $port; run: scripts/stack.ps1 up"; $ok = $false }
     else { $ok = (Run-Step 'e2e' $npx @('playwright', 'test', '--reporter=line')) -and $ok }
 } elseif (-not $Only) { Add-Result 'e2e' 'SKIP' 'use -E2E with the dev server running' }
 

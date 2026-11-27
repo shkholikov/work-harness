@@ -6,7 +6,7 @@ description: Final check of a finished SPFx task before commit - runs scripts/ve
 1. **Checks.** Run `pwsh -NoProfile -File scripts/verify.ps1` (add `-Base <branch>` if the PR will not target `main`).
    - On FAIL: read only the log tail it prints, fix, run again. After 3 failed rounds on the same step, stop and explain to the user.
 2. **Smoke test (UI changes).** If `src/` changed and `tests/e2e` exists:
-   - `pwsh -NoProfile -File scripts/dev.ps1 start` (skip if already running),
+   - `pwsh -NoProfile -File scripts/stack.ps1 up` (says so if already running),
    - `pwsh -NoProfile -File scripts/verify.ps1 -E2E -Only e2e`,
    - report the screenshot names in `.spfx-dev/screenshots/`. Ask the user to look at them if the change is visual.
 3. **Review by tier** (the script prints `TIER:`):

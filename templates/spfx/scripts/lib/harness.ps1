@@ -1,4 +1,4 @@
-# Shared helpers for scripts/dev.ps1 and scripts/verify.ps1 (dot-source this file).
+# Shared helpers for scripts/stack.ps1 and scripts/verify.ps1 (dot-source this file).
 # Compatible with Windows PowerShell 5.1 and PowerShell 7.
 
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
